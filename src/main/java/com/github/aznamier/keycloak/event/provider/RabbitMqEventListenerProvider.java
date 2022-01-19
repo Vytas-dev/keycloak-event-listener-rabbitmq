@@ -1,5 +1,6 @@
 package com.github.aznamier.keycloak.event.provider;
 
+import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
@@ -15,7 +16,6 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.AMQP.BasicProperties.Builder;
 import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 
 public class RabbitMqEventListenerProvider implements EventListenerProvider {
@@ -29,10 +29,10 @@ public class RabbitMqEventListenerProvider implements EventListenerProvider {
 
 	public RabbitMqEventListenerProvider(RabbitMqConfig cfg, KeycloakSession session) {
 		this.cfg = cfg;
-		
+
 		this.factory = new ConnectionFactory();
 
-		this.factory.setUsername(cfg.getUsername());
+		/*this.factory.setUsername(cfg.getUsername());
 		this.factory.setPassword(cfg.getPassword());
 		this.factory.setVirtualHost(cfg.getVhost());
 		this.factory.setHost(cfg.getHostUrl());
@@ -44,11 +44,16 @@ public class RabbitMqEventListenerProvider implements EventListenerProvider {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+		}*/
+
+		try {
+			this.factory.setUri(cfg.getConnectionUri());
+		} catch (URISyntaxException | NoSuchAlgorithmException | KeyManagementException e) {
+			e.printStackTrace();
 		}
-		
+
 		this.session = session;
 		this.session.getTransactionManager().enlistAfterCompletion(tx);
-		
 	}
 
 	@Override
@@ -99,16 +104,10 @@ public class RabbitMqEventListenerProvider implements EventListenerProvider {
 
 	private void publishNotification(String messageString, BasicProperties props, String routingKey) {
 
-		
 
-		try {
-			Connection conn = factory.newConnection();
-			Channel channel = conn.createChannel();
-			
+		try (Channel channel = factory.newConnection().createChannel()) {
 			channel.basicPublish(cfg.getExchange(), routingKey, props, messageString.getBytes());
 			System.out.println("keycloak-to-rabbitmq SUCCESS sending message: " + routingKey);
-			channel.close();
-			conn.close();
 
 		} catch (Exception ex) {
 			System.err.println("keycloak-to-rabbitmq ERROR sending message: " + routingKey);

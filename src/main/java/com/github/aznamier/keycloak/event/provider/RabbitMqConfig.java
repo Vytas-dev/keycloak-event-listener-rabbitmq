@@ -20,6 +20,7 @@ public class RabbitMqConfig {
 	private String password;
 	private String vhost;
 	private Boolean useTls;
+	private String connectionUri;
 
 	private String exchange;
 	
@@ -87,6 +88,7 @@ public class RabbitMqConfig {
 		cfg.password = resolveConfigVar(config, "password", "admin");
 		cfg.vhost = resolveConfigVar(config, "vhost", "");
 		cfg.useTls = Boolean.valueOf(resolveConfigVar(config, "use_tls", "false"));
+		cfg.connectionUri = resolveConfigVar(config, "connection_uri", "");
 
 		cfg.exchange = resolveConfigVar(config, "exchange", "amq.topic");
 		return cfg;
@@ -154,4 +156,11 @@ public class RabbitMqConfig {
 		this.exchange = exchange;
 	}
 
+	public String getConnectionUri() {
+		return connectionUri;
+	}
+
+	public void setConnectionUri(String connectionUri) {
+		this.connectionUri = connectionUri;
+	}
 }
