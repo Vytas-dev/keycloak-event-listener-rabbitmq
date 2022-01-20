@@ -1,11 +1,14 @@
 package com.github.aznamier.keycloak.event.provider;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
+import com.rabbitmq.client.Connection;
 import org.keycloak.events.Event;
 import org.keycloak.events.EventListenerProvider;
 import org.keycloak.events.EventListenerTransaction;
@@ -104,15 +107,20 @@ public class RabbitMqEventListenerProvider implements EventListenerProvider {
 
 	private void publishNotification(String messageString, BasicProperties props, String routingKey) {
 
+		try (Connection connection = factory.newConnection()) {
+			try (Channel channel = connection.createChannel()) {
+				channel.basicPublish(cfg.getExchange(), routingKey, props, messageString.getBytes());
+				System.out.println("keycloak-to-rabbitmq SUCCESS sending message: " + routingKey);
 
-		try (Channel channel = factory.newConnection().createChannel()) {
-			channel.basicPublish(cfg.getExchange(), routingKey, props, messageString.getBytes());
-			System.out.println("keycloak-to-rabbitmq SUCCESS sending message: " + routingKey);
-
-		} catch (Exception ex) {
+			} catch (Exception ex) {
+				System.err.println("keycloak-to-rabbitmq ERROR sending message: " + routingKey);
+				ex.printStackTrace();
+			}
+		} catch (IOException | TimeoutException e) {
 			System.err.println("keycloak-to-rabbitmq ERROR sending message: " + routingKey);
-			ex.printStackTrace();
+			e.printStackTrace();
 		}
+
 	}
 
 }
